@@ -73,8 +73,11 @@ def split_train_test_data(data,test_size = 0.2):
 data = load_training_data()
 print(data.info())
 print(data.head())
-print(data['CODE_GENDER'].value_counts())
-print(data['FLAG_OWN_REALTY'].value_counts())
+
+print(data.describe())
+
+#print(data['CODE_GENDER'].value_counts())
+#print(data['FLAG_OWN_REALTY'].value_counts())
 
 #print(data.head())
 target = data['TARGET']
@@ -99,10 +102,10 @@ full_pipeline = FeatureUnion(transformer_list=[
     ('cat_pipeline',cat_pipeline)
 ])
 
-data_prepared = full_pipeline.fit_transform(data)
-print(data_prepared.shape)
-print(type(data_prepared))
-print(data_prepared[:10])
+#data_prepared = full_pipeline.fit_transform(data)
+#print(data_prepared.shape)
+#print(type(data_prepared))
+#print(data_prepared[:10])
 '''
 f1=0.0
 
