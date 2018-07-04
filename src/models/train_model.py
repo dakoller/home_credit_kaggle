@@ -15,7 +15,8 @@ from sklearn.datasets import make_moons, make_circles, make_classification
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import Imputer
+
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.tree import DecisionTreeClassifier
@@ -89,10 +90,10 @@ cat_attribs = ['CODE_GENDER','FLAG_OWN_CAR']
 
 num_pipeline = Pipeline([
     ('selector',DataFrameSelector(num_attribs)),
-    ('imputer', SimpleImputer(missing_values=np.nan, strategy='mean')),
+    ('imputer', Imputer(missing_values='NaN', strategy='mean')),
     ('std_scaler',StandardScaler()),
 ])
-
+'''
 cat_pipeline = Pipeline([
     ('selector',DataFrameSelector(cat_attribs)),
     #('label_binarizer', PipelineFriendlyLabelBinarizer()),
@@ -105,6 +106,8 @@ full_pipeline = FeatureUnion(transformer_list=[
 ])
 
 data_prepared = full_pipeline.fit_transform(data)
+'''
+data_prepared = num_pipeline.fit_transform(data)
 print(data_prepared.shape)
 print(type(data_prepared))
 #print(data_prepared[:10])
