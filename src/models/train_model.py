@@ -71,18 +71,41 @@ def split_train_test_data(data,test_size = 0.2):
     train_indices = shuffled_indices[test_set_size:]
     return data.iloc[train_indices], data.iloc[test_indices]
 
+def getBureauData():
+    csv_path = os.path.join('..\\..\\data\\raw\\bureau.csv', 'bureau.csv')
+    df = pd.read_csv(csv_path)
+    print(df.describe())
+
+    aggregations = {
+        'SK_ID_BUREAU': {
+            'LOAN_COUNT': 'count',
+            'AMT_ANNUITY': 'sum',
+        }
+    }
+
+    loan_count = df.groupby('SK_ID_CURR')\
+        .agg(aggregations)
+
+    pprint(loan_count)
+
+    return loan_count
+
 
 data = load_training_data()
-print(data.info())
-print(data.head())
+#print(data.info())
+#print(data.head())
 
-print(data.describe())
+#print(data.describe())
 
 #print(data['CODE_GENDER'].value_counts())
 #print(data['FLAG_OWN_REALTY'].value_counts())
 
-print(data["EXT_SOURCE_1"].value_counts())
+#print(data["EXT_SOURCE_1"].value_counts())
 target = data['TARGET']
+
+b_data = getBureauData()
+data = pd.merge(data,b_data,on='SK_ID_CURR')
+#print(data.columns)
 
 num_attribs = ['EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3','CNT_CHILDREN']
 cat_attribs = ['CODE_GENDER','FLAG_OWN_CAR']
@@ -107,11 +130,15 @@ full_pipeline = FeatureUnion(transformer_list=[
 
 data_prepared = full_pipeline.fit_transform(data)
 '''
-data_prepared = num_pipeline.fit_transform(data)
-print(data_prepared.shape)
-print(type(data_prepared))
-#print(data_prepared[:10])
+#data_prepared = num_pipeline.fit_transform(data)
 
+corr = data.corr()
+pprint(corr['TARGET'].sort_values(ascending= False))
+
+#print(data_prepared.shape)
+#print(type(data_prepared))
+#print(data_prepared[:10])
+'''
 f1=0.0
 
 n1= ''
@@ -135,7 +162,7 @@ for name,clf in zip(names,classifiers):
 
 print('Best classifier: %s with F1 = %0.2f' % (name,f1))
 print(_clf)
-
+'''
 
 
 
