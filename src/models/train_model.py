@@ -3,19 +3,20 @@ from pprint import pprint
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 from sklearn.pipeline import Pipeline,FeatureUnion
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, MultiLabelBinarizer
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.linear_model import SGDClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_predict, GridSearchCV
-from sklearn.metrics import confusion_matrix, f1_score
+from sklearn.metrics import confusion_matrix, f1_score, precision_score, recall_score
 from sklearn.datasets import make_moons, make_circles, make_classification
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.preprocessing import Imputer
+import category_encoders as ce
 
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
@@ -31,7 +32,8 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 names = ["Nearest Neighbors", "Linear SVM",
          #"RBF SVM", "Gaussian Process",
          #"Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
-         #"Naive Bayes", "QDA"
+         #"Naive Bayes",
+         "QDA"
          ]
 
 classifiers = [
@@ -44,7 +46,7 @@ classifiers = [
     #MLPClassifier(alpha=1),
     #AdaBoostClassifier(),
     #GaussianNB(),
-    #QuadraticDiscriminantAnalysis()
+    QuadraticDiscriminantAnalysis()
     ]
 
 class PipelineFriendlyLabelBinarizer(LabelBinarizer):
@@ -74,19 +76,17 @@ def split_train_test_data(data,test_size = 0.2):
 def getBureauData():
     csv_path = os.path.join('..\\..\\data\\raw\\bureau.csv', 'bureau.csv')
     df = pd.read_csv(csv_path)
-    print(df.describe())
+    #print(df.describe())
 
     aggregations = {
         'SK_ID_BUREAU': {
             'LOAN_COUNT': 'count',
-            'AMT_ANNUITY': 'sum',
+            'AMT_ANNUITY': 'mean',
         }
     }
 
     loan_count = df.groupby('SK_ID_CURR')\
         .agg(aggregations)
-
-    pprint(loan_count)
 
     return loan_count
 
@@ -104,11 +104,21 @@ data = load_training_data()
 target = data['TARGET']
 
 b_data = getBureauData()
-data = pd.merge(data,b_data,on='SK_ID_CURR')
+
+#exit()
+data = pd.merge(data,b_data,on='SK_ID_CURR', left_index=True)
+#data.rename(index=str, columns = { ('SK_ID_BUREAU', 'LOAN_COUNT'): 'LOAN_COUNT',  ('SK_ID_BUREAU', 'AMT_ANNUITY'):'ANNUITY' })
+data = data.rename(columns = {data.columns[-1] : 'AMT_ANNUITY'})
+data = data.rename(columns = {data.columns[-2] : 'LOAN_COUNT'})
+
+#print(type(data))
 #print(data.columns)
 
-num_attribs = ['EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3','CNT_CHILDREN']
+#print(data['CODE_GENDER'].value_counts())
+
+num_attribs = ['AMT_INCOME_TOTAL', 'EXT_SOURCE_1','EXT_SOURCE_2','EXT_SOURCE_3','CNT_CHILDREN','LOAN_COUNT', 'AMT_ANNUITY','AMT_CREDIT']
 cat_attribs = ['CODE_GENDER','FLAG_OWN_CAR']
+flag_attribs = ['CODE_GENDER','FLAG_OWN_CAR','FLAG_OWN_REALTY']
 
 
 num_pipeline = Pipeline([
@@ -116,24 +126,32 @@ num_pipeline = Pipeline([
     ('imputer', Imputer(missing_values='NaN', strategy='mean')),
     ('std_scaler',StandardScaler()),
 ])
+
+flag_pipeline = Pipeline([
+    ('selector', DataFrameSelector(flag_attribs)),
+    ('encoder', ce.OrdinalEncoder()),
+])
 '''
 cat_pipeline = Pipeline([
     ('selector',DataFrameSelector(cat_attribs)),
-    #('label_binarizer', PipelineFriendlyLabelBinarizer()),
-    ('multi_binaizer', MultiLabelBinarizer()),
+    ('label_binarizer', PipelineFriendlyLabelBinarizer()),
+    #('multi_binaizer', MultiLabelBinarizer()),
 ])
-
+'''
 full_pipeline = FeatureUnion(transformer_list=[
     ('num_pipeline',num_pipeline),
-    ('cat_pipeline',cat_pipeline)
+    ('flag_pipeline', flag_pipeline),
+   # ('cat_pipeline',cat_pipeline)
 ])
 
 data_prepared = full_pipeline.fit_transform(data)
-'''
-#data_prepared = num_pipeline.fit_transform(data)
 
-corr = data.corr()
-pprint(corr['TARGET'].sort_values(ascending= False))
+df2 = pd.DataFrame(data_prepared)
+#, columns= num_attribs + flag_attribs)
+
+pprint(df2)
+corr = df2.corr()
+pprint(corr[0].sort_values(ascending= False))
 
 #print(data_prepared.shape)
 #print(type(data_prepared))
@@ -153,6 +171,9 @@ for name,clf in zip(names,classifiers):
     survived_pred = cross_val_predict(clf, data_prepared, data['TARGET'],cv=3)
     print(confusion_matrix(data['TARGET'],survived_pred))
     _f1 = f1_score(data['TARGET'],survived_pred)
+    print('Precision score %0.2f' % precision_score(data['TARGET'],survived_pred))
+    print('Recall score %0.2f' % recall_score(data['TARGET'], survived_pred))
+
     print(_f1)
 
     if _f1 > f1:
@@ -162,7 +183,7 @@ for name,clf in zip(names,classifiers):
 
 print('Best classifier: %s with F1 = %0.2f' % (name,f1))
 print(_clf)
+
+
 '''
-
-
 
